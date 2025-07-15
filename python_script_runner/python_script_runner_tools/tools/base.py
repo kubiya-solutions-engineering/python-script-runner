@@ -54,8 +54,7 @@ class PythonScriptRunnerTool(Tool):
             type="docker",
             with_files=COMMON_FILES,
             env=COMMON_ENV,
-            secrets=[],
-            env=[]
+            secrets=[]
         )
 
     def get_args(self) -> List[Arg]:
