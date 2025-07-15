@@ -35,7 +35,7 @@ class CLITools:
         """Execute Python scripts with automatic dependency installation."""
         return PythonScriptRunnerTool(
             name="python_script_runner",
-            description="Execute Python scripts with automatic installation of common libraries (pandas, openpyxl, lxml, boto3). Provide the script path or base64-encoded script content to run.",
+            description="Execute Python scripts with automatic installation of common libraries (pandas, openpyxl, lxml, boto3). Provide the script path or script content to run.",
             content="""
             #!/bin/bash
             set -e
@@ -50,7 +50,7 @@ class CLITools:
                 echo ""
                 echo "Usage examples:"
                 echo "  - script_path: /path/to/your/script.py"
-                echo "  - script_content: base64-encoded Python script content"
+                echo "  - script_content: 'import pandas as pd; print(pd.__version__)'"
                 echo ""
                 echo "Pre-installed libraries:"
                 echo "  - pandas: Data manipulation and analysis"
@@ -106,11 +106,11 @@ class CLITools:
                 echo "🐍 Executing Python script from content..."
                 echo ""
                 
-                # Create temporary script file using base64 to handle special characters
+                # Create temporary script file using printf to handle special characters
                 TEMP_SCRIPT="/tmp/temp_script.py"
                 
-                # Decode the base64 encoded script content
-                echo "$script_content" | base64 -d > "$TEMP_SCRIPT"
+                # Use printf to safely write script content to file
+                printf '%s\n' "$script_content" > "$TEMP_SCRIPT"
                 
                 echo "Script content:"
                 echo "==============="
@@ -155,7 +155,7 @@ class CLITools:
             """,
             args=[
                 Arg(name="script_path", description="Path to the Python script file to execute", required=False),
-                Arg(name="script_content", description="Python script content to execute directly (base64 encoded to handle special characters)", required=False)
+                Arg(name="script_content", description="Python script content to execute directly (alternative to script_path)", required=False)
             ]
         )
 
