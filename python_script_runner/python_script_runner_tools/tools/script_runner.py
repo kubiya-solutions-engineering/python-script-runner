@@ -37,7 +37,7 @@ class CLITools:
             name="python_script_runner",
             description="Execute Python scripts with automatic installation of common libraries (pandas, openpyxl, lxml, boto3). Provide the script path or script content to run.",
             content="""
-            #!/bin/sh
+            #!/bin/bash
             set -e
             
             # Parse arguments
@@ -60,26 +60,46 @@ class CLITools:
                 exit 1
             fi
             
-            # Install system dependencies
-            echo "📦 Installing system dependencies..."
-            apk add --no-cache python3 python3-dev py3-pip gcc musl-dev libxml2-dev libxslt-dev >/dev/null 2>&1 || {
-                echo "❌ Failed to install system dependencies"
-                exit 1
-            }
+            # Install minimal system dependencies if needed
+            echo "📦 Installing minimal system dependencies..."
+            apt-get update >/dev/null 2>&1 || true
+            apt-get install -y gcc >/dev/null 2>&1 || true
             
             # Install required Python packages
             echo "📦 Installing required Python packages..."
-            REQUIRED_PACKAGES="pandas openpyxl lxml boto3"
             
-            for package in $REQUIRED_PACKAGES; do
-                echo "Installing $package..."
-                if pip3 install "$package" >/dev/null 2>&1; then
-                    echo "✅ $package installed successfully"
-                else
-                    echo "❌ Failed to install $package"
-                    exit 1
-                fi
-            done
+            # Upgrade pip to latest version
+            echo "Upgrading pip..."
+            pip install --upgrade pip >/dev/null 2>&1
+            
+            # Install packages using pre-compiled wheels when possible
+            echo "Installing pandas..."
+            pip install pandas >/dev/null 2>&1 || {
+                echo "❌ Failed to install pandas"
+                exit 1
+            }
+            echo "✅ pandas installed successfully"
+            
+            echo "Installing openpyxl..."
+            pip install openpyxl >/dev/null 2>&1 || {
+                echo "❌ Failed to install openpyxl"
+                exit 1
+            }
+            echo "✅ openpyxl installed successfully"
+            
+            echo "Installing lxml..."
+            pip install lxml >/dev/null 2>&1 || {
+                echo "❌ Failed to install lxml"
+                exit 1
+            }
+            echo "✅ lxml installed successfully"
+            
+            echo "Installing boto3..."
+            pip install boto3 >/dev/null 2>&1 || {
+                echo "❌ Failed to install boto3"
+                exit 1
+            }
+            echo "✅ boto3 installed successfully"
             
             # Handle script execution
             if [ -n "$script_content" ]; then
@@ -97,7 +117,7 @@ class CLITools:
                 
                 # Execute the script
                 echo "📤 Output:"
-                if python3 "$TEMP_SCRIPT"; then
+                if python "$TEMP_SCRIPT"; then
                     echo ""
                     echo "✅ Script executed successfully"
                 else
@@ -120,7 +140,7 @@ class CLITools:
                 
                 # Execute the script
                 echo "📤 Output:"
-                if python3 "$script_path"; then
+                if python "$script_path"; then
                     echo ""
                     echo "✅ Script executed successfully"
                 else
@@ -133,8 +153,7 @@ class CLITools:
             args=[
                 Arg(name="script_path", description="Path to the Python script file to execute", required=False),
                 Arg(name="script_content", description="Python script content to execute directly (alternative to script_path)", required=False)
-            ],
-            image="alpine:latest"
+            ]
         )
 
 
