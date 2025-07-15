@@ -4,74 +4,136 @@ Python Script Runner
 A simple script runner that can execute any Python script with the required libraries.
 """
 
+from typing import List
 import sys
-import os
-import subprocess
+from .base import ObserveCLITool, Arg
+from kubiya_sdk.tools.registry import tool_registry
 
-def install_dependencies():
-    """Install required Python packages."""
-    required_packages = ['pandas', 'openpyxl', 'lxml']
-    
-    print("📦 Installing required packages...")
-    for package in required_packages:
+class CLITools:
+    """Python Script Runner tools for executing Python scripts with required libraries."""
+
+    def __init__(self):
+        """Initialize and register Python Script Runner tools."""
         try:
-            print(f"Installing {package}...")
-            result = subprocess.run([sys.executable, '-m', 'pip', 'install', package], 
-                                  capture_output=True, text=True, check=True)
-            print(f"✅ {package} installed successfully")
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to install {package}: {e.stderr}")
-            return False
-    
-    return True
+            tools = [
+                self.run_python_script()
+            ]
+            
+            for tool in tools:
+                try:
+                    tool_registry.register("python_script_runner", tool)
+                    print(f"✅ Registered: {tool.name}")
+                except Exception as e:
+                    print(f"❌ Failed to register {tool.name}: {str(e)}", file=sys.stderr)
+                    raise
+        except Exception as e:
+            print(f"❌ Failed to register Python Script Runner tools: {str(e)}", file=sys.stderr)
+            raise
 
-def run_python_script(script_path):
-    """Run a Python script and return its output."""
-    try:
-        if not os.path.exists(script_path):
-            print(f"❌ Error: Script '{script_path}' not found.")
-            return 1
-        
-        # Install dependencies first
-        if not install_dependencies():
-            print("❌ Failed to install required dependencies")
-            return 1
-        
-        print(f"🐍 Executing Python script: {script_path}")
-        
-        # Execute the Python script
-        result = subprocess.run([sys.executable, script_path], 
-                              capture_output=True, text=True)
-        
-        # Print stdout and stderr
-        if result.stdout:
-            print("📤 Output:")
-            print(result.stdout)
-        
-        if result.stderr:
-            print("⚠️  Errors:")
-            print(result.stderr)
-        
-        return result.returncode
-        
-    except Exception as e:
-        print(f"❌ Error running script: {e}")
-        return 1
+    def run_python_script(self) -> ObserveCLITool:
+        """Execute Python scripts with automatic dependency installation."""
+        return ObserveCLITool(
+            name="python_script_runner",
+            description="Execute Python scripts with automatic installation of common libraries (pandas, openpyxl, lxml). Provide the script path or script content to run.",
+            content="""
+            #!/bin/sh
+            set -e
+            
+            # Parse arguments
+            script_path="$script_path"
+            script_content="$script_content"
+            
+            # Validate arguments
+            if [ -z "$script_path" ] && [ -z "$script_content" ]; then
+                echo "❌ Either script_path or script_content argument is required"
+                echo ""
+                echo "Usage examples:"
+                echo "  - script_path: /path/to/your/script.py"
+                echo "  - script_content: 'import pandas as pd; print(pd.__version__)'"
+                echo ""
+                echo "Pre-installed libraries:"
+                echo "  - pandas: Data manipulation and analysis"
+                echo "  - openpyxl: Excel file reading and writing"
+                echo "  - lxml: XML and HTML processing"
+                exit 1
+            fi
+            
+            # Install system dependencies
+            echo "📦 Installing system dependencies..."
+            apk add --no-cache python3 python3-dev py3-pip gcc musl-dev libxml2-dev libxslt-dev >/dev/null 2>&1 || {
+                echo "❌ Failed to install system dependencies"
+                exit 1
+            }
+            
+            # Install required Python packages
+            echo "📦 Installing required Python packages..."
+            REQUIRED_PACKAGES="pandas openpyxl lxml"
+            
+            for package in $REQUIRED_PACKAGES; do
+                echo "Installing $package..."
+                if pip3 install "$package" >/dev/null 2>&1; then
+                    echo "✅ $package installed successfully"
+                else
+                    echo "❌ Failed to install $package"
+                    exit 1
+                fi
+            done
+            
+            # Handle script execution
+            if [ -n "$script_content" ]; then
+                echo "🐍 Executing Python script from content..."
+                echo ""
+                echo "Script content:"
+                echo "==============="
+                echo "$script_content"
+                echo "==============="
+                echo ""
+                
+                # Create temporary script file
+                TEMP_SCRIPT="/tmp/temp_script.py"
+                echo "$script_content" > "$TEMP_SCRIPT"
+                
+                # Execute the script
+                echo "📤 Output:"
+                if python3 "$TEMP_SCRIPT"; then
+                    echo ""
+                    echo "✅ Script executed successfully"
+                else
+                    echo ""
+                    echo "❌ Script execution failed"
+                    exit 1
+                fi
+                
+                # Clean up
+                rm -f "$TEMP_SCRIPT"
+                
+            elif [ -n "$script_path" ]; then
+                echo "🐍 Executing Python script: $script_path"
+                
+                # Check if script exists
+                if [ ! -f "$script_path" ]; then
+                    echo "❌ Error: Script '$script_path' not found."
+                    exit 1
+                fi
+                
+                # Execute the script
+                echo "📤 Output:"
+                if python3 "$script_path"; then
+                    echo ""
+                    echo "✅ Script executed successfully"
+                else
+                    echo ""
+                    echo "❌ Script execution failed"
+                    exit 1
+                fi
+            fi
+            """,
+            args=[
+                Arg(name="script_path", description="Path to the Python script file to execute", required=False),
+                Arg(name="script_content", description="Python script content to execute directly (alternative to script_path)", required=False)
+            ],
+            image="alpine:latest"
+        )
 
-def main():
-    """Main function to handle command line arguments."""
-    if len(sys.argv) < 2:
-        print("Usage: python script_runner.py <script_path>")
-        print("Example: python script_runner.py my_script.py")
-        print("")
-        print("Pre-installed libraries:")
-        print("  - pandas: Data manipulation and analysis")
-        print("  - openpyxl: Excel file reading and writing")
-        print("  - lxml: XML and HTML processing")
-        return 1
-    
-    script_path = sys.argv[1]
-    return run_python_script(script_path)
 
-if __name__ == "__main__":
-    sys.exit(main()) 
+CLITools() 
