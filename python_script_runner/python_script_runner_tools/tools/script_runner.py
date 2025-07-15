@@ -6,7 +6,8 @@ A simple script runner that can execute any Python script with the required libr
 
 from typing import List
 import sys
-from .base import ObserveCLITool, Arg
+from .base import PythonScriptRunnerTool
+from kubiya_sdk.tools import Arg
 from kubiya_sdk.tools.registry import tool_registry
 
 class CLITools:
@@ -30,11 +31,11 @@ class CLITools:
             print(f"❌ Failed to register Python Script Runner tools: {str(e)}", file=sys.stderr)
             raise
 
-    def run_python_script(self) -> ObserveCLITool:
+    def run_python_script(self) -> PythonScriptRunnerTool:
         """Execute Python scripts with automatic dependency installation."""
-        return ObserveCLITool(
+        return PythonScriptRunnerTool(
             name="python_script_runner",
-            description="Execute Python scripts with automatic installation of common libraries (pandas, openpyxl, lxml). Provide the script path or script content to run.",
+            description="Execute Python scripts with automatic installation of common libraries (pandas, openpyxl, lxml, boto3). Provide the script path or script content to run.",
             content="""
             #!/bin/sh
             set -e
@@ -55,6 +56,7 @@ class CLITools:
                 echo "  - pandas: Data manipulation and analysis"
                 echo "  - openpyxl: Excel file reading and writing"
                 echo "  - lxml: XML and HTML processing"
+                echo "  - boto3: AWS SDK for Python"
                 exit 1
             fi
             
@@ -67,7 +69,7 @@ class CLITools:
             
             # Install required Python packages
             echo "📦 Installing required Python packages..."
-            REQUIRED_PACKAGES="pandas openpyxl lxml"
+            REQUIRED_PACKAGES="pandas openpyxl lxml boto3"
             
             for package in $REQUIRED_PACKAGES; do
                 echo "Installing $package..."
