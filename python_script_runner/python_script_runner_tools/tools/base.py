@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from kubiya_sdk.tools import Tool, Arg, FileSpec
-
+from .common import COMMON_FILES, COMMON_ENV
 PYTHON_SCRIPT_RUNNER_ICON_URL = "https://cdn.worldvectorlogo.com/logos/python-5.svg"
 
 DEFAULT_MERMAID = """
@@ -52,6 +52,8 @@ class PythonScriptRunnerTool(Tool):
             image=image,
             icon_url=PYTHON_SCRIPT_RUNNER_ICON_URL,
             type="docker",
+            with_files=COMMON_FILES,
+            env=COMMON_ENV,
             secrets=[],
             env=[]
         )
