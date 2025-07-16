@@ -92,8 +92,8 @@ class CodeSandboxTools:
             echo "🏗️  Creating CodeSandbox environment..."
             echo "📝 Name: $sandbox_name"
             echo "🐍 Template: $template_type"
-            if [ -n "$api_key" ]; then
-                echo "🔑 API Key: ****${api_key: -4}"
+            if [ -n "$api_key" ] && [ "$api_key" != "" ]; then
+                echo "🔑 API Key: ****$(echo "$api_key" | tail -c 5)"
             else
                 echo "🔑 API Key: Not configured"
             fi
