@@ -90,16 +90,29 @@ async function createSandbox() {
         // Save the script file using the proper file system API
         console.log('📝 Saving Python script to main.py...');
         await sleep(100);
-        await client.fs.writeTextFile('main.py', process.env.SCRIPT_CONTENT || 'print("Hello, CodeSandbox!")');
-        console.log('✅ Script saved to main.py successfully!');
-        await sleep(100);
+        
+        try {
+            await client.fs.writeTextFile('main.py', process.env.SCRIPT_CONTENT || 'print("Hello, CodeSandbox!")');
+            console.log('✅ Script saved to main.py successfully!');
+            await sleep(100);
+        } catch (saveError) {
+            console.error('❌ Failed to save script:', saveError.message);
+            await sleep(100);
+            throw saveError;
+        }
         
         // List files to confirm
         console.log('📂 Checking saved files...');
         await sleep(100);
-        const files = await client.fs.readdir('.');
-        console.log('Files in workspace:', files);
-        await sleep(100);
+        
+        try {
+            const files = await client.fs.readdir('.');
+            console.log('Files in workspace:', files);
+            await sleep(100);
+        } catch (listError) {
+            console.log('⚠️  Could not list files:', listError.message);
+            await sleep(100);
+        }
         
         // Save sandbox info
         const fs = require('fs');
@@ -128,6 +141,9 @@ async function createSandbox() {
         await sleep(100);
         console.log('3. Share the URL with others');
         await sleep(100);
+        
+        // Exit successfully
+        process.exit(0);
         
     } catch (error) {
         console.error('❌ Failed to create CodeSandbox:', error.message);
@@ -331,6 +347,9 @@ async function executeSandbox() {
         
         console.log('\\n✅ Script executed successfully!');
         await sleep(100);
+        
+        // Exit successfully
+        process.exit(0);
         
     } catch (error) {
         console.error('❌ Failed to execute in CodeSandbox:', error.message);
