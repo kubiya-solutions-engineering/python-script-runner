@@ -39,7 +39,7 @@ class CodeSandboxSDKTools:
             description="Create a CodeSandbox using the new CodeSandbox SDK. Requires CSB_API_KEY secret and a CodeSandbox Pro plan.",
             content="""
             # Create Node.js script to use the CodeSandbox SDK
-            cat > /tmp/create_sandbox.js << 'EOF'
+            cat > /tmp/codesandbox_project/create_sandbox.js << 'EOF'
 const { CodeSandbox } = require('@codesandbox/sdk');
 
 async function createSandbox() {
@@ -119,9 +119,10 @@ EOF
             export SCRIPT_CONTENT="$script_content"
             export SANDBOX_NAME="$sandbox_name"
             
-            # Run the Node.js script
+            # Run the Node.js script from the correct directory
             echo "🔧 Running CodeSandbox SDK..."
-            node /tmp/create_sandbox.js
+            cd /tmp/codesandbox_project
+            node create_sandbox.js
             """,
             args=[
                 Arg(name="script_content", description="Python script content to run in the CodeSandbox", required=True),
@@ -136,7 +137,7 @@ EOF
             description="Execute Python script in an existing CodeSandbox using the SDK. Can connect to existing sandbox or create a new one.",
             content="""
             # Create Node.js script to use the CodeSandbox SDK
-            cat > /tmp/execute_sandbox.js << 'EOF'
+            cat > /tmp/codesandbox_project/execute_sandbox.js << 'EOF'
 const { CodeSandbox } = require('@codesandbox/sdk');
 const fs = require('fs');
 const path = require('path');
@@ -247,9 +248,10 @@ EOF
             export SANDBOX_ID="$sandbox_id"
             export SANDBOX_NAME="$sandbox_name"
             
-            # Run the Node.js script
+            # Run the Node.js script from the correct directory
             echo "🔧 Running CodeSandbox SDK execution..."
-            node /tmp/execute_sandbox.js
+            cd /tmp/codesandbox_project
+            node execute_sandbox.js
             """,
             args=[
                 Arg(name="script_content", description="Python script content to execute", required=True),

@@ -48,9 +48,19 @@ class CodeSandboxTool(Tool):
         #!/bin/bash
         set -e
         
-        # Install CodeSandbox SDK
+        # Create working directory for Node.js project
+        mkdir -p /tmp/codesandbox_project
+        cd /tmp/codesandbox_project
+        
+        # Initialize npm project if package.json doesn't exist
+        if [ ! -f package.json ]; then
+            echo "📦 Initializing npm project..."
+            npm init -y >/dev/null 2>&1
+        fi
+        
+        # Install CodeSandbox SDK locally
         echo "📦 Installing CodeSandbox SDK..."
-        npm install -g @codesandbox/sdk >/dev/null 2>&1 || {{
+        npm install @codesandbox/sdk >/dev/null 2>&1 || {{
             echo "❌ Failed to install CodeSandbox SDK"
             exit 1
         }}
