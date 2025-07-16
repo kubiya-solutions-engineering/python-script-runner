@@ -131,83 +131,93 @@ EOF
         )
 
     def execute_codesandbox_sdk(self) -> CodeSandboxTool:
-        """Execute a script in an existing CodeSandbox using the SDK."""
+        """Execute a script in a CodeSandbox using the SDK."""
         return CodeSandboxTool(
             name="execute_codesandbox_sdk",
-            description="Execute Python script in an existing CodeSandbox using the SDK. Can connect to existing sandbox or create a new one.",
+            description="Execute Python script in CodeSandbox using the SDK. Can resume existing sandbox or create a new one.",
             content="""
             # Create Node.js script to use the CodeSandbox SDK
             cat > /tmp/codesandbox_project/execute_sandbox.js << 'EOF'
 const { CodeSandbox } = require('@codesandbox/sdk');
 const fs = require('fs');
-const path = require('path');
 
 async function executeSandbox() {
     try {
         const sdk = new CodeSandbox(process.env.CSB_API_KEY);
-        let sandboxId = process.env.SANDBOX_ID;
+        let sandbox;
         
-        // If no sandbox ID provided, try to find saved sandbox or create new one
-        if (!sandboxId) {
-            const sandboxName = process.env.SANDBOX_NAME || 'python-execution';
-            const filename = `/tmp/sandbox_${sandboxName.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
-            
-            // Try to load existing sandbox info
-            if (fs.existsSync(filename)) {
-                console.log('📂 Found saved sandbox info:', filename);
-                try {
-                    const sandboxInfo = JSON.parse(fs.readFileSync(filename, 'utf8'));
-                    sandboxId = sandboxInfo.id;
-                    console.log('🆔 Using existing sandbox:', sandboxId);
-                } catch (e) {
-                    console.log('⚠️  Could not read sandbox file:', e.message);
-                }
-            }
-            
-            // If still no sandbox ID, create a new one
-            if (!sandboxId) {
-                console.log('🏗️  No existing sandbox found, creating new one...');
-                
-                const sandbox = await sdk.sandboxes.create({
-                    title: sandboxName,
-                    description: 'Python execution sandbox created via SDK',
-                    files: {
-                        'main.py': {
-                            content: process.env.SCRIPT_CONTENT || 'print("Hello, CodeSandbox!")'
-                        },
-                        'requirements.txt': {
-                            content: 'pandas\\nnumpy\\nrequests\\nboto3\\nopenpyxl\\nlxml'
-                        }
-                    },
-                    template: 'python'
-                });
-                
-                sandboxId = sandbox.id;
-                
-                // Save sandbox info
-                const sandboxInfo = {
-                    id: sandbox.id,
-                    url: sandbox.url,
-                    title: sandbox.title,
-                    description: sandbox.description,
-                    createdAt: new Date().toISOString()
-                };
-                
-                fs.writeFileSync(filename, JSON.stringify(sandboxInfo, null, 2));
-                console.log('✅ New sandbox created:', sandboxId);
+        // Check if we should try to resume an existing sandbox
+        const sandboxId = process.env.SANDBOX_ID;
+        if (sandboxId) {
+            console.log(`🔄 Attempting to resume existing sandbox: ${sandboxId}`);
+            try {
+                sandbox = await sdk.sandboxes.resume(sandboxId);
+                console.log('✅ Successfully resumed existing sandbox!');
+            } catch (resumeError) {
+                console.log(`⚠️  Failed to resume sandbox: ${resumeError.message}`);
+                console.log('🏗️  Creating new sandbox instead...');
+                sandbox = null;
             }
         }
         
-        // Connect to the sandbox
-        console.log('🔗 Connecting to sandbox:', sandboxId);
-        const sandbox = await sdk.sandboxes.get(sandboxId);
-        const client = await sandbox.connect();
+        // Create a new sandbox if we don't have one
+        if (!sandbox) {
+            console.log('🚀 Creating new CodeSandbox environment...');
+            
+            sandbox = await sdk.sandboxes.create({
+                title: process.env.SANDBOX_NAME || 'Python Script Execution',
+                description: 'Python script execution via CodeSandbox SDK',
+                files: {
+                    'main.py': {
+                        content: process.env.SCRIPT_CONTENT || 'print("Hello, CodeSandbox!")'
+                    },
+                    'requirements.txt': {
+                        content: 'pandas\\nnumpy\\nrequests\\nboto3\\nopenpyxl\\nlxml'
+                    }
+                },
+                template: 'python',
+                privacy: 'unlisted', // Make it accessible by URL but not public
+                hibernationTimeoutSeconds: 1800 // 30 minutes before hibernation
+            });
+            
+            console.log('✅ Sandbox created successfully!');
+        }
+        
+        console.log('🆔 Sandbox ID:', sandbox.id);
+        console.log('🌐 Sandbox URL:', `https://codesandbox.io/s/${sandbox.id}`);
+        console.log('🔧 Bootup Type:', sandbox.bootupType);
+        console.log('🏢 Cluster:', sandbox.cluster);
+        
+        // Connect to the sandbox with a session
+        console.log('🔗 Connecting to sandbox...');
+        const client = await sandbox.connect({
+            id: 'script-executor', // Session ID
+            permission: 'write' // Need write access to execute commands
+        });
         
         console.log('✅ Connected to sandbox successfully!');
         
+        // Check if we need to install dependencies (for new sandboxes)
+        if (!sandboxId || sandbox.bootupType === 'CLEAN') {
+            console.log('📦 Installing Python dependencies...');
+            try {
+                await client.commands.run('pip install pandas numpy requests boto3 openpyxl lxml', {
+                    timeout: 120000 // 2 minutes timeout
+                });
+                console.log('✅ Dependencies installed successfully!');
+            } catch (installError) {
+                console.log(`⚠️  Dependency installation warning: ${installError.message}`);
+                console.log('Continuing with execution...');
+            }
+        } else {
+            console.log('📦 Dependencies should already be installed (resumed sandbox)');
+        }
+        
         // Execute the script
         console.log('▶️  Executing Python script...');
-        const output = await client.commands.run('python main.py');
+        const output = await client.commands.run('python main.py', {
+            timeout: 300000 // 5 minutes timeout for script execution
+        });
         
         console.log('\\n📤 Script Output:');
         console.log('================');
@@ -215,14 +225,33 @@ async function executeSandbox() {
         console.log('================');
         
         console.log('\\n🎯 Execution Details:');
-        console.log('📍 Sandbox URL:', sandbox.url);
+        console.log('📍 Sandbox URL:', `https://codesandbox.io/s/${sandbox.id}`);
         console.log('🆔 Sandbox ID:', sandbox.id);
-        console.log('📝 Title:', sandbox.title);
+        console.log('📝 Title:', sandbox.title || 'Untitled');
+        console.log('🔧 Up to Date:', sandbox.isUpToDate);
+        
+        // Save sandbox info for future use
+        const sandboxInfo = {
+            id: sandbox.id,
+            url: `https://codesandbox.io/s/${sandbox.id}`,
+            title: sandbox.title || 'Untitled',
+            description: sandbox.description || '',
+            cluster: sandbox.cluster,
+            bootupType: sandbox.bootupType,
+            isUpToDate: sandbox.isUpToDate,
+            createdAt: new Date().toISOString()
+        };
+        
+        const filename = `/tmp/sandbox_execution_${Date.now()}.json`;
+        fs.writeFileSync(filename, JSON.stringify(sandboxInfo, null, 2));
+        console.log('💾 Sandbox info saved to:', filename);
         
         console.log('\\n✅ Script executed successfully!');
+        console.log('💡 Tip: Use the same sandbox ID to resume this environment later');
         
     } catch (error) {
         console.error('❌ Failed to execute in CodeSandbox:', error.message);
+        console.error('Full error:', error);
         
         if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
             console.error('');
@@ -230,10 +259,15 @@ async function executeSandbox() {
             console.error('1. Check that your CSB_API_KEY is correct');
             console.error('2. Ensure you have a CodeSandbox Pro plan');
             console.error('3. Verify the API key has the necessary permissions');
-        } else if (error.message.includes('not found')) {
+            console.error('4. Get your API key from: https://codesandbox.io/dashboard/settings');
+        } else if (error.message.includes('rate limit')) {
             console.error('');
-            console.error('🔍 Sandbox Not Found:');
-            console.error('The specified sandbox ID may not exist or you may not have access to it.');
+            console.error('⏱️ Rate Limit Error:');
+            console.error('You have exceeded the API rate limit. Please try again later.');
+        } else if (error.message.includes('timeout')) {
+            console.error('');
+            console.error('⏱️ Timeout Error:');
+            console.error('The operation took too long. Consider breaking down the script or increasing timeout.');
         }
         
         process.exit(1);
@@ -255,8 +289,8 @@ EOF
             """,
             args=[
                 Arg(name="script_content", description="Python script content to execute", required=True),
-                Arg(name="sandbox_id", description="Existing CodeSandbox ID (optional)", required=False),
-                Arg(name="sandbox_name", description="Sandbox name to find or create (default: python-execution)", required=False)
+                Arg(name="sandbox_id", description="Existing sandbox ID to resume (optional)", required=False),
+                Arg(name="sandbox_name", description="Sandbox name (default: Python Script Execution)", required=False)
             ]
         )
 
