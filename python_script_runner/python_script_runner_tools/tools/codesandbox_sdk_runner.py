@@ -42,11 +42,15 @@ class CodeSandboxSDKTools:
             cat > /tmp/codesandbox_project/create_sandbox.js << 'EOF'
 const { CodeSandbox } = require('@codesandbox/sdk');
 
+// Helper function to add delays between logs for cleaner output
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function createSandbox() {
     try {
         const sdk = new CodeSandbox(process.env.CSB_API_KEY);
         
         console.log('🚀 Creating CodeSandbox using SDK...');
+        await sleep(100);
         
         // Create the sandbox
         const sandbox = await sdk.sandboxes.create({
@@ -66,27 +70,36 @@ async function createSandbox() {
         });
         
         console.log('✅ CodeSandbox created successfully!');
+        await sleep(100);
         console.log('🆔 Sandbox ID:', sandbox.id);
+        await sleep(100);
         console.log('🌐 Sandbox URL:', `https://codesandbox.io/s/${sandbox.id}`);
+        await sleep(100);
         
         // Connect to the sandbox to save the script file
         console.log('🔗 Connecting to sandbox to save script...');
+        await sleep(100);
         const client = await sandbox.connect({
             id: 'script-creator',
             permission: 'write'
         });
         
         console.log('✅ Connected to sandbox successfully!');
+        await sleep(100);
         
         // Save the script file using the proper file system API
         console.log('📝 Saving Python script to main.py...');
+        await sleep(100);
         await client.fs.writeTextFile('main.py', process.env.SCRIPT_CONTENT || 'print("Hello, CodeSandbox!")');
         console.log('✅ Script saved to main.py successfully!');
+        await sleep(100);
         
         // List files to confirm
         console.log('📂 Checking saved files...');
+        await sleep(100);
         const files = await client.fs.readdir('.');
         console.log('Files in workspace:', files);
+        await sleep(100);
         
         // Save sandbox info
         const fs = require('fs');
@@ -102,26 +115,42 @@ async function createSandbox() {
         fs.writeFileSync(filename, JSON.stringify(sandboxInfo, null, 2));
         
         console.log('💾 Sandbox info saved to:', filename);
+        await sleep(100);
         console.log('');
+        await sleep(100);
         console.log('🎉 Your sandbox is ready!');
+        await sleep(100);
         console.log('You can now:');
+        await sleep(100);
         console.log('1. Visit the URL to see your sandbox');
+        await sleep(100);
         console.log('2. Use execute_codesandbox_sdk to run the script');
+        await sleep(100);
         console.log('3. Share the URL with others');
+        await sleep(100);
         
     } catch (error) {
         console.error('❌ Failed to create CodeSandbox:', error.message);
+        await sleep(100);
         
         if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
             console.error('');
+            await sleep(100);
             console.error('🔑 Authentication Error:');
+            await sleep(100);
             console.error('1. Check that your CSB_API_KEY is correct');
+            await sleep(100);
             console.error('2. Ensure you have a CodeSandbox Pro plan');
+            await sleep(100);
             console.error('3. Verify the API key has the necessary permissions');
+            await sleep(100);
         } else if (error.message.includes('rate limit')) {
             console.error('');
+            await sleep(100);
             console.error('⏱️ Rate Limit Error:');
+            await sleep(100);
             console.error('You have exceeded the API rate limit. Please try again later.');
+            await sleep(100);
         }
         
         process.exit(1);
@@ -157,6 +186,9 @@ EOF
 const { CodeSandbox } = require('@codesandbox/sdk');
 const fs = require('fs');
 
+// Helper function to add delays between logs for cleaner output
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function executeSandbox() {
     try {
         const sdk = new CodeSandbox(process.env.CSB_API_KEY);
@@ -167,32 +199,43 @@ async function executeSandbox() {
         }
         
         console.log(`🔄 Connecting to existing sandbox: ${sandboxId}`);
+        await sleep(100);
         
         // Resume the existing sandbox
         const sandbox = await sdk.sandboxes.resume(sandboxId);
         console.log('✅ Successfully connected to existing sandbox!');
+        await sleep(100);
         
         console.log('🆔 Sandbox ID:', sandbox.id);
+        await sleep(100);
         console.log('🌐 Sandbox URL:', `https://codesandbox.io/s/${sandbox.id}`);
+        await sleep(100);
         console.log('📝 Title:', sandbox.title || 'Untitled');
+        await sleep(100);
         console.log('🔧 Bootup Type:', sandbox.bootupType);
+        await sleep(100);
         
         // Connect to the sandbox with a session
         console.log('🔗 Connecting to sandbox...');
+        await sleep(100);
         const client = await sandbox.connect({
             id: 'script-executor',
             permission: 'write'
         });
         
         console.log('✅ Connected to sandbox successfully!');
+        await sleep(100);
         
         // Check what files exist in the workspace
         console.log('📂 Checking workspace files...');
+        await sleep(100);
         try {
             const files = await client.fs.readdir('.');
             console.log('Files in workspace:', files);
+            await sleep(100);
         } catch (dirError) {
             console.log('Could not list files:', dirError.message);
+            await sleep(100);
         }
         
         // Check if main.py exists
@@ -200,15 +243,19 @@ async function executeSandbox() {
         try {
             const scriptContent = await client.fs.readTextFile('main.py');
             console.log('✅ main.py exists and contains:', scriptContent.length, 'characters');
+            await sleep(100);
             scriptExists = true;
         } catch (readError) {
             console.log('❌ main.py does not exist:', readError.message);
+            await sleep(100);
             
             // Only create main.py if script_content is provided as fallback
             if (process.env.SCRIPT_CONTENT) {
                 console.log('📝 Creating main.py from provided script content...');
+                await sleep(100);
                 await client.fs.writeTextFile('main.py', process.env.SCRIPT_CONTENT);
                 console.log('✅ main.py created successfully!');
+                await sleep(100);
                 scriptExists = true;
             } else {
                 throw new Error('main.py not found and no script_content provided. Please create the sandbox first or provide script_content as fallback.');
@@ -222,35 +269,50 @@ async function executeSandbox() {
         // Install dependencies if needed (for clean boots)
         if (sandbox.bootupType === 'CLEAN') {
             console.log('📦 Installing Python dependencies...');
+            await sleep(100);
             try {
                 await client.commands.run('pip install -r requirements.txt', {
                     timeout: 120000
                 });
                 console.log('✅ Dependencies installed successfully!');
+                await sleep(100);
             } catch (installError) {
                 console.log(`⚠️  Dependency installation warning: ${installError.message}`);
+                await sleep(100);
                 console.log('Continuing with execution...');
+                await sleep(100);
             }
         } else {
             console.log('📦 Dependencies should already be installed (warm boot)');
+            await sleep(100);
         }
         
         // Execute the script
         console.log('▶️  Executing Python script (main.py)...');
+        await sleep(100);
         const output = await client.commands.run('python main.py', {
             timeout: 300000 // 5 minutes timeout
         });
         
         console.log('\\n📤 Script Output:');
+        await sleep(100);
         console.log('================');
+        await sleep(100);
         console.log(output);
+        await sleep(100);
         console.log('================');
+        await sleep(100);
         
         console.log('\\n🎯 Execution Details:');
+        await sleep(100);
         console.log('📍 Sandbox URL:', `https://codesandbox.io/s/${sandbox.id}`);
+        await sleep(100);
         console.log('🆔 Sandbox ID:', sandbox.id);
+        await sleep(100);
         console.log('📝 Title:', sandbox.title || 'Untitled');
+        await sleep(100);
         console.log('🔧 Up to Date:', sandbox.isUpToDate);
+        await sleep(100);
         
         // Save execution info
         const executionInfo = {
@@ -265,26 +327,40 @@ async function executeSandbox() {
         const filename = `/tmp/execution_${Date.now()}.json`;
         fs.writeFileSync(filename, JSON.stringify(executionInfo, null, 2));
         console.log('💾 Execution info saved to:', filename);
+        await sleep(100);
         
         console.log('\\n✅ Script executed successfully!');
+        await sleep(100);
         
     } catch (error) {
         console.error('❌ Failed to execute in CodeSandbox:', error.message);
+        await sleep(100);
         
         if (error.message.includes('unauthorized') || error.message.includes('authentication')) {
             console.error('');
+            await sleep(100);
             console.error('🔑 Authentication Error:');
+            await sleep(100);
             console.error('1. Check that your CSB_API_KEY is correct');
+            await sleep(100);
             console.error('2. Ensure you have a CodeSandbox Pro plan');
+            await sleep(100);
             console.error('3. Verify the API key has the necessary permissions');
+            await sleep(100);
         } else if (error.message.includes('rate limit')) {
             console.error('');
+            await sleep(100);
             console.error('⏱️ Rate Limit Error:');
+            await sleep(100);
             console.error('You have exceeded the API rate limit. Please try again later.');
+            await sleep(100);
         } else if (error.message.includes('timeout')) {
             console.error('');
+            await sleep(100);
             console.error('⏱️ Timeout Error:');
+            await sleep(100);
             console.error('The script took too long to execute. Consider optimizing or breaking it down.');
+            await sleep(100);
         }
         
         process.exit(1);
