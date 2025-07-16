@@ -54,7 +54,7 @@ class PythonScriptRunnerTool(Tool):
             type="docker",
             with_files=COMMON_FILES,
             env=COMMON_ENV,
-            secrets=[]
+            secrets=["CODE_SANDBOX_API"]
         )
 
     def get_args(self) -> List[Arg]:
